@@ -11,7 +11,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private int stepsInGrass;
     [SerializeField] private int minStepsToEncounter;
     [SerializeField] private int maxStepsToEncounter;
-    
+
 
     private PlayerControls playerControls;
     private Rigidbody rb;
@@ -36,6 +36,7 @@ public class PlayerController : MonoBehaviour
     private void Start()
     {
         rb = gameObject.GetComponent<Rigidbody>();
+        CalculateStepsToNextEncounter();
     }
 
     // Update is called once per frame
@@ -46,9 +47,9 @@ public class PlayerController : MonoBehaviour
 
         movement = new Vector3(x, 0, z).normalized;
 
-        anim.SetBool(IS_WALK_PARAM, movement!= Vector3.zero);
+        anim.SetBool(IS_WALK_PARAM, movement != Vector3.zero);
 
-        if (x!= 0 && x<0)
+        if (x != 0 && x < 0)
         {
             playerSprite.flipX = true;
         }
@@ -62,7 +63,7 @@ public class PlayerController : MonoBehaviour
     {
         rb.MovePosition(transform.position + movement * speed * Time.fixedDeltaTime);
 
-        Collider[] colliders = Physics.OverlapSphere(transform.position,1, grassLayer);
+        Collider[] colliders = Physics.OverlapSphere(transform.position, 1, grassLayer);
         movingInGrass = colliders.Length != 0 && movement != Vector3.zero;
 
         if (movingInGrass == true)
@@ -83,7 +84,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-private void CalculateStepsToNextEncounter()
+    private void CalculateStepsToNextEncounter()
     {
         stepsToEncounter = Random.Range(minStepsToEncounter, maxStepsToEncounter);
     }
