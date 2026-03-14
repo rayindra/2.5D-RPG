@@ -1371,8 +1371,8 @@ MonoBehaviour:
   grassLayer:
     serializedVersion: 2
     m_Bits: 64
-  minStepsToEncounter: 10
-  maxStepsToEncounter: 20
+  minStepsToEncounter: 7
+  maxStepsToEncounter: 14
 --- !u!54 &1168768641
 Rigidbody:
   m_ObjectHideFlags: 0
