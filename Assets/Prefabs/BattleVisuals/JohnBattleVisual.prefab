@@ -33,8 +33,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -20, y: 0}
+  m_AnchoredPosition: {x: 0.011924744, y: 0}
+  m_SizeDelta: {x: -19.989525, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &410403233520704378
 GameObject:
@@ -48,7 +48,7 @@ GameObject:
   - component: {fileID: 7909687213612674004}
   - component: {fileID: 218759559428678456}
   - component: {fileID: 5596990591465785507}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: JohnBattleVisual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -516,7 +516,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4006396294390792947}
   - component: {fileID: 5362628906112732895}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: 1718646976106-john_0
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -625,7 +625,7 @@ RectTransform:
   m_GameObject: {fileID: 2866391414935775465}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.5737149, y: 0.5737149, z: 0.5737149}
+  m_LocalScale: {x: 0.6021159, y: 0.81265676, z: 0.5737149}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1149659796147078811}
@@ -896,7 +896,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0, b: 0, a: 1}
+  m_Color: {r: 0.11747954, g: 0.754717, b: 0.36383662, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1187,7 +1187,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.25}
   m_AnchorMax: {x: 1, y: 0.75}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 1.5, y: 0}
   m_SizeDelta: {x: -10, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &5892778013154782595

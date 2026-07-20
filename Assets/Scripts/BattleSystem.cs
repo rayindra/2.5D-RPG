@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 public class BattleSystem : MonoBehaviour
 {
@@ -33,7 +34,12 @@ public class BattleSystem : MonoBehaviour
 
     private const string ACTION_MESSAGE = "'s Action:";
     private const string WIN_MESSAGE = "Your party won the battle";
+    private const string LOSE_MESSAGE = "Your party has been defeated";
+    private const string SUCCESSFULLY_RUN_MESSAGE = "You successfully ran away!";
+    private const string UNSUCCESSFULLY_RUN_MESSAGE = "You failed to run away!";
     private const int TURN_DURATION = 2;
+    private const int RUN_CHANCE = 50;
+    private const string OVERWORLD_SCENE = "OverworldScene";
 
     // Start is called before the first frame update
     void Start()
@@ -44,6 +50,7 @@ public class BattleSystem : MonoBehaviour
         CreatePartyEntities();
         CreateEnemyEntities();
         ShowBattleMenu();
+        DetermineBattleOrder();
 
     }
 
@@ -58,21 +65,25 @@ public class BattleSystem : MonoBehaviour
 
         for (int i = 0; i < allBattlers.Count; i++)
         {
-            switch (allBattlers[i].BattleAction)
+            if (state == BattleState.Battle && allBattlers[i].CurrHealth > 0)
             {
-                case BattleEntities.Action.Attack:
-                    // do the attack
-                    yield return StartCoroutine(AttackRoutine(i));
-                    break;
-                case BattleEntities.Action.Run:
-                    // run
-                    break;
-                default:
-                    Debug.Log("Error - incorrect battle action");
-                    break;
+                switch (allBattlers[i].BattleAction)
+                {
+                    case BattleEntities.Action.Attack:
+                        // do the attack
+                        yield return StartCoroutine(AttackRoutine(i));
+                        break;
+                    case BattleEntities.Action.Run:
+                        yield return StartCoroutine(RunRoutine());
+                        break;
+                    default:
+                        Debug.Log("Error - incorrect battle action");
+                        break;
+                }
             }
-
         }
+
+        RemoveDeadBattlers(); // remove any dead battlers from the list
 
         if (state == BattleState.Battle)
         {
@@ -93,24 +104,27 @@ public class BattleSystem : MonoBehaviour
         if (allBattlers[i].IsPlayer == true)
         {
             BattleEntities currAttacker = allBattlers[i];
+            if (allBattlers[currAttacker.Target].CurrHealth <= 0)
+            {
+                currAttacker.SetTarget(GetRandomEnemy());
+            }
             BattleEntities currTarget = allBattlers[currAttacker.Target];
             AttackAction(currAttacker, currTarget); // attack selected enemy (attack action)
             yield return new WaitForSeconds(TURN_DURATION);// wait a few seconds
-            
+
             // kill the enemy
-            if(currTarget.CurrHealth <=0)
+            if (currTarget.CurrHealth <= 0)
             {
                 bottomText.text = string.Format("{0} defeated {1}", currAttacker.Name, currTarget.Name);
                 yield return new WaitForSeconds(TURN_DURATION);// wait a few seconds
                 enemyBattlers.Remove(currTarget);
-                allBattlers.Remove(currTarget);
 
-                if(enemyBattlers.Count <=0)
+                if (enemyBattlers.Count <= 0)
                 {
                     state = BattleState.Won;
                     bottomText.text = WIN_MESSAGE;
                     yield return new WaitForSeconds(TURN_DURATION);// wait a few seconds
-                    Debug.Log("Go back to overworld scene");
+                    SceneManager.LoadScene(OVERWORLD_SCENE);
                 }
             }
             // if no enemies remain
@@ -120,14 +134,67 @@ public class BattleSystem : MonoBehaviour
 
 
         //enemies turn
-        // attack selected party member (attack action)
-        // wait a few seconds
-        // kill the party member
+        if (i < allBattlers.Count && allBattlers[i].IsPlayer == false)
+        {
+            BattleEntities currAttacker = allBattlers[i];
+            currAttacker.SetTarget(GetRandomPartyMember());// get random party member (target)
+            BattleEntities currTarget = allBattlers[currAttacker.Target];
 
-        // if no party members remain
-        // -> we lost the battle
+            AttackAction(currAttacker, currTarget);// attack selected party member (attack action)
+            yield return new WaitForSeconds(TURN_DURATION);// wait a few seconds
 
+            if (currTarget.CurrHealth <= 0)
+            {
+                // kill the party member
+                bottomText.text = string.Format("{0} defeated {1}", currAttacker.Name, currTarget.Name);
+                yield return new WaitForSeconds(TURN_DURATION);// wait a few seconds
+                playerBattlers.Remove(currTarget);
 
+                if (playerBattlers.Count <= 0) // if no party members remain
+                {
+                    // -> we lost the battle
+                    state = BattleState.Lost;
+                    bottomText.text = LOSE_MESSAGE;
+                    yield return new WaitForSeconds(TURN_DURATION);// wait a few seconds
+                    Debug.Log("Game Over");
+                }
+
+            }
+
+        }
+    }
+
+    private IEnumerator RunRoutine()
+    {
+        if (state == BattleState.Battle)
+        {
+            if (Random.Range(1, 101) >= RUN_CHANCE)
+            {
+                state = BattleState.Run;
+                bottomText.text = SUCCESSFULLY_RUN_MESSAGE;
+                allBattlers.Clear();
+                yield return new WaitForSeconds(TURN_DURATION);// wait a few seconds
+                SceneManager.LoadScene(OVERWORLD_SCENE);
+                yield break;
+            }
+            else
+            {
+                bottomText.text = UNSUCCESSFULLY_RUN_MESSAGE;
+                yield return new WaitForSeconds(TURN_DURATION);// wait a few seconds
+            }
+        }
+
+    }
+
+    private void RemoveDeadBattlers()
+    {
+        for (int i = 0; i < allBattlers.Count; i++)
+        {
+            if (allBattlers[i].CurrHealth <= 0)
+            {
+                allBattlers.RemoveAt(i);
+            }
+        }
     }
 
     private void CreatePartyEntities()
@@ -144,7 +211,7 @@ public class BattleSystem : MonoBehaviour
 
             BattleVisuals tempBattleVisuals = Instantiate(currentParty[i].MemberBattleVisualPrefab,
             partySpawnPoints[i].position, Quaternion.identity).GetComponent<BattleVisuals>();
-            tempBattleVisuals.SetStartingValues(currentParty[i].MaxHealth, currentParty[i].MaxHealth, currentParty[i].Level);
+            tempBattleVisuals.SetStartingValues(currentParty[i].CurrHealth, currentParty[i].MaxHealth, currentParty[i].Level);
             tempEntity.BattleVisuals = tempBattleVisuals;
 
             allBattlers.Add(tempEntity);
@@ -242,7 +309,69 @@ public class BattleSystem : MonoBehaviour
         currTarget.BattleVisuals.PlayHitAnimation(); // play their hit anim
         currTarget.UpdateUI(); // update the UI
         bottomText.text = string.Format("{0} attacks {1} for {2} damage", currAttacker.Name, currTarget.Name, damage);
+        SaveHealth();
+    }
 
+
+    private int GetRandomPartyMember()
+    {
+        List<int> partyMembers = new List<int>(); // create a temporary list of type int (index)
+        // find all the party members -> add them to our list
+        for (int i = 0; i < allBattlers.Count; i++)
+        {
+            if (allBattlers[i].IsPlayer == true) // we have a party member
+            {
+                partyMembers.Add(i);
+            }
+        }
+        return partyMembers[Random.Range(0, partyMembers.Count)];// return a random party member
+    }
+
+    private int GetRandomEnemy()
+    {
+        List<int> enemies = new List<int>();
+        for (int i = 0; i < allBattlers.Count; i++)
+        {
+            if (allBattlers[i].IsPlayer == false)
+            {
+                enemies.Add(i);
+            }
+        }
+        return enemies[Random.Range(0, enemies.Count)];
+    }
+
+    private void SaveHealth()
+    {
+        for (int i = 0; i < playerBattlers.Count; i++)
+        {
+            partyManager.SaveHealth(i, playerBattlers[i].CurrHealth);
+        }
+    }
+
+    private void DetermineBattleOrder()
+    {
+        allBattlers.Sort((bi1, bi2) => -bi1.Initiative.CompareTo(bi2.Initiative)); // sorts list by initiative in ascending order.
+    }
+
+    public void SelectRunAction()
+    {
+        state = BattleState.Selection;
+        BattleEntities currentPlayerEntity = playerBattlers[currentPlayer];
+        currentPlayerEntity.BattleAction = BattleEntities.Action.Run;
+
+        battleMenu.SetActive(false);
+        currentPlayer++;
+        if (currentPlayer >= playerBattlers.Count) //if all players have selected an action
+        {
+            //Start The Battle
+            StartCoroutine(BattleRoutine());
+
+        }
+        else
+        {
+            enemySelectionMenu.SetActive(false);  // show the battle menu for the next player
+            ShowBattleMenu();
+        }
     }
 
 }
