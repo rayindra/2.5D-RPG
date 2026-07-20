@@ -200,7 +200,7 @@ public class BattleSystem : MonoBehaviour
     private void CreatePartyEntities()
     {
         List<PartyMember> currentParty = new List<PartyMember>();
-        currentParty = partyManager.GetCurrentParty();
+        currentParty = partyManager.GetAliveParty();
 
         for (int i = 0; i < currentParty.Count; i++)
         {
@@ -373,6 +373,7 @@ public class BattleSystem : MonoBehaviour
             ShowBattleMenu();
         }
     }
+
 
 }
 
