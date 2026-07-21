@@ -28,15 +28,24 @@ public class BattleSystem : MonoBehaviour
     [SerializeField] private GameObject bottomTextPopUp;
     [SerializeField] private TextMeshProUGUI bottomText;
 
+    [Header("Game Over UI")]
+    [SerializeField] private GameObject gameOverPanel;
+
+    [Header("Level Up UI")]
+    [SerializeField] private GameObject levelUpPopup;
+    [SerializeField] private TextMeshProUGUI levelUpText;
+
     private PartyManager partyManager;
     private EnemyManager enemyManager;
     private int currentPlayer;
+    private int totalExpEarned;
 
     private const string ACTION_MESSAGE = "'s Action:";
     private const string WIN_MESSAGE = "Your party won the battle";
     private const string LOSE_MESSAGE = "Your party has been defeated";
     private const string SUCCESSFULLY_RUN_MESSAGE = "You successfully ran away!";
     private const string UNSUCCESSFULLY_RUN_MESSAGE = "You failed to run away!";
+    private const string EXP_GAINED_MESSAGE = "Party gained {0} EXP!";
     private const int TURN_DURATION = 2;
     private const int RUN_CHANCE = 50;
     private const string OVERWORLD_SCENE = "OverworldScene";
@@ -46,6 +55,9 @@ public class BattleSystem : MonoBehaviour
     {
         partyManager = GameObject.FindFirstObjectByType<PartyManager>();
         enemyManager = GameObject.FindFirstObjectByType<EnemyManager>();
+
+        if (gameOverPanel != null) gameOverPanel.SetActive(false);
+        if (levelUpPopup != null) levelUpPopup.SetActive(false);
 
         CreatePartyEntities();
         CreateEnemyEntities();
@@ -116,6 +128,7 @@ public class BattleSystem : MonoBehaviour
             if (currTarget.CurrHealth <= 0)
             {
                 bottomText.text = string.Format("{0} defeated {1}", currAttacker.Name, currTarget.Name);
+                totalExpEarned += currTarget.ExpReward; // catat EXP dari musuh yang dikalahkan
                 yield return new WaitForSeconds(TURN_DURATION);// wait a few seconds
                 enemyBattlers.Remove(currTarget);
 
@@ -124,6 +137,7 @@ public class BattleSystem : MonoBehaviour
                     state = BattleState.Won;
                     bottomText.text = WIN_MESSAGE;
                     yield return new WaitForSeconds(TURN_DURATION);// wait a few seconds
+                    yield return StartCoroutine(AwardExpRoutine());
                     SceneManager.LoadScene(OVERWORLD_SCENE);
                 }
             }
@@ -156,7 +170,7 @@ public class BattleSystem : MonoBehaviour
                     state = BattleState.Lost;
                     bottomText.text = LOSE_MESSAGE;
                     yield return new WaitForSeconds(TURN_DURATION);// wait a few seconds
-                    Debug.Log("Game Over");
+                    ShowGameOver();
                 }
 
             }
@@ -184,6 +198,47 @@ public class BattleSystem : MonoBehaviour
             }
         }
 
+    }
+
+    // Menampilkan panel Game Over, menghentikan flow battle
+    private void ShowGameOver()
+    {
+        bottomTextPopUp.SetActive(false);
+        if (gameOverPanel != null)
+        {
+            gameOverPanel.SetActive(true);
+        }
+        else
+        {
+            Debug.Log("Game Over - assign gameOverPanel di Inspector untuk menampilkan UI");
+        }
+    }
+
+    // Membagikan EXP ke party dan menampilkan popup jika ada yang naik level
+    private IEnumerator AwardExpRoutine()
+    {
+        if (totalExpEarned <= 0) yield break;
+
+        bottomTextPopUp.SetActive(true);
+        bottomText.text = string.Format(EXP_GAINED_MESSAGE, totalExpEarned);
+        yield return new WaitForSeconds(TURN_DURATION);
+
+        List<LevelUpResult> levelUps = partyManager.AddExpToParty(totalExpEarned);
+
+        for (int i = 0; i < levelUps.Count; i++)
+        {
+            if (levelUpPopup != null && levelUpText != null)
+            {
+                levelUpPopup.SetActive(true);
+                levelUpText.text = string.Format("{0} reached Level {1}!", levelUps[i].MemberName, levelUps[i].NewLevel);
+            }
+            yield return new WaitForSeconds(TURN_DURATION);
+        }
+
+        if (levelUpPopup != null)
+        {
+            levelUpPopup.SetActive(false);
+        }
     }
 
     private void RemoveDeadBattlers()
@@ -232,6 +287,7 @@ public class BattleSystem : MonoBehaviour
 
             tempEntity.SetEntityValues(currentEnemies[i].EnemyName, currentEnemies[i].CurrHealth, currentEnemies[i].MaxHealth,
             currentEnemies[i].Initiative, currentEnemies[i].Strength, currentEnemies[i].Level, false);
+            tempEntity.ExpReward = currentEnemies[i].ExpReward;
 
             BattleVisuals tempBattleVisuals = Instantiate(currentEnemies[i].EnemyVisualPrefab,
             enemySpawnPoints[i].position, Quaternion.identity).GetComponent<BattleVisuals>();
@@ -390,6 +446,7 @@ public class BattleEntities
     public int Strength;
     public int Level;
     public bool IsPlayer;
+    public int ExpReward;
     public BattleVisuals BattleVisuals;
     public int Target;
 

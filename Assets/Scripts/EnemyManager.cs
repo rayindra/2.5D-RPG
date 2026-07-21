@@ -49,6 +49,7 @@ public class EnemyManager : MonoBehaviour
                 newEnemy.CurrHealth = newEnemy.MaxHealth;
                 newEnemy.Strength = Mathf.RoundToInt(allEnemies[i].BaseStr + (allEnemies[i].BaseStr * levelModifier));
                 newEnemy.Initiative = Mathf.RoundToInt(allEnemies[i].BaseInitiative + (allEnemies[i].BaseInitiative * levelModifier));
+                newEnemy.ExpReward = Mathf.RoundToInt(allEnemies[i].ExpReward + (allEnemies[i].ExpReward * levelModifier));
                 newEnemy.EnemyVisualPrefab = allEnemies[i].EnemyVisualPrefab;
 
                 currentEnemy.Add(newEnemy);
@@ -71,5 +72,6 @@ public class Enemy
     public int MaxHealth;
     public int Strength;
     public int Initiative;
+    public int ExpReward;
     public GameObject EnemyVisualPrefab;
 }
