@@ -108,4 +108,10 @@ private void OnDestroy()
         stepsToEncounter = Random.Range(minStepsToEncounter, maxStepsToEncounter);
     }
 
+    public void SetOverworldVisuals(Animator animator, SpriteRenderer spriteRenderer)
+    {
+        anim = animator;
+        playerSprite = spriteRenderer;
+    }
+
 }
