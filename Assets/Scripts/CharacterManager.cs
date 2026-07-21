@@ -87,17 +87,19 @@ public class CharacterManager : MonoBehaviour
 
                 playerVisual.transform.SetParent(player.transform);
 
-                player.GetComponent<PlayerController>().SetOverworldVisuals(playerVisual.GetComponent<Animator>(), playerVisual.GetComponent<SpriteRenderer>());
-
+                player.GetComponent<PlayerController>().SetOverworldVisuals(playerVisual.GetComponent<Animator>(), 
+                playerVisual.GetComponent<SpriteRenderer>(), playerVisual.transform.localScale);
+                playerVisual.GetComponent<MemberFollowAI>().enabled = false;
                 overworldCharacters.Add(playerVisual);
             }
             else
             {
                 Vector3 positionToSpawn = transform.position;
                 positionToSpawn.x -=1;
-                GameObject tempOverworldMember = Instantiate(currentParty[i].MemberOverworldVisualPrefab, positionToSpawn, Quaternion.identity);
+                GameObject tempFollower = Instantiate(currentParty[i].MemberOverworldVisualPrefab, positionToSpawn, Quaternion.identity);
 
-                overworldCharacters.Add(tempOverworldMember);
+                tempFollower.GetComponent<MemberFollowAI>().SetFollowDistance(i);
+                overworldCharacters.Add(tempFollower);
             }
         }
     }

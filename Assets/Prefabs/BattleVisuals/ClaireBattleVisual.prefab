@@ -290,13 +290,13 @@ GameObject:
   - component: {fileID: 3391686158955667996}
   - component: {fileID: 5580797960158917512}
   - component: {fileID: 596915348113719759}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Shadow
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &3391686158955667996
 Transform:
   m_ObjectHideFlags: 0
@@ -516,7 +516,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4006396294390792947}
   - component: {fileID: 5362628906112732895}
-  m_Layer: 5
+  m_Layer: 7
   m_Name: Claire
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -548,7 +548,7 @@ SpriteRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2685097014321412209}
   m_Enabled: 1
-  m_CastShadows: 0
+  m_CastShadows: 1
   m_ReceiveShadows: 0
   m_DynamicOccludee: 1
   m_StaticShadowCaster: 0
@@ -565,7 +565,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
+  - {fileID: 2100000, guid: 54be922f2b857d341930b8cf8c3c5305, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
