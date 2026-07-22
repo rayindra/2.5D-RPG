@@ -17,4 +17,9 @@ public class PartyMemberInfo : ScriptableObject
     public int HealthPerLevel = 10;       // MaxHealth gained per level up
     public int StrPerLevel = 2;           // Strength gained per level up
     public int InitiativePerLevel = 1;    // Initiative gained per level up
+
+    [Header("SFX")]
+    public AudioClip AttackSound;
+    public AudioClip HitSound;
+    public AudioClip DeathSound;
 }

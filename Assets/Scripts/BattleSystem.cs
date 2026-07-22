@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
 
@@ -35,10 +36,18 @@ public class BattleSystem : MonoBehaviour
     [SerializeField] private GameObject levelUpPopup;
     [SerializeField] private TextMeshProUGUI levelUpText;
 
+    [Header("Battle Results UI (Drop, EXP, EXP ke level berikutnya)")]
+    [SerializeField] private GameObject battleResultsPanel;
+    [SerializeField] private TextMeshProUGUI dropsText;
+    [SerializeField] private TextMeshProUGUI expGainedText;
+    [SerializeField] private TextMeshProUGUI expToNextLevelText;
+    [SerializeField] private Button continueButton; // tombol "Continue" -> kembali ke Overworld
+
     private PartyManager partyManager;
     private EnemyManager enemyManager;
     private int currentPlayer;
     private int totalExpEarned;
+    private List<EquipmentInfo> battleDrops = new List<EquipmentInfo>(); // item yang berhasil drop selama battle ini
 
     private const string ACTION_MESSAGE = "'s Action:";
     private const string WIN_MESSAGE = "Your party won the battle";
@@ -46,6 +55,7 @@ public class BattleSystem : MonoBehaviour
     private const string SUCCESSFULLY_RUN_MESSAGE = "You successfully ran away!";
     private const string UNSUCCESSFULLY_RUN_MESSAGE = "You failed to run away!";
     private const string EXP_GAINED_MESSAGE = "Party gained {0} EXP!";
+    private const string NO_DROPS_MESSAGE = "Tidak ada item yang didapat.";
     private const int TURN_DURATION = 2;
     private const int RUN_CHANCE = 50;
     private const string OVERWORLD_SCENE = "OverworldScene";
@@ -58,6 +68,8 @@ public class BattleSystem : MonoBehaviour
 
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
         if (levelUpPopup != null) levelUpPopup.SetActive(false);
+        if (battleResultsPanel != null) battleResultsPanel.SetActive(false);
+        if (continueButton != null) continueButton.onClick.AddListener(OnContinueFromResults);
 
         CreatePartyEntities();
         CreateEnemyEntities();
@@ -128,7 +140,9 @@ public class BattleSystem : MonoBehaviour
             if (currTarget.CurrHealth <= 0)
             {
                 bottomText.text = string.Format("{0} defeated {1}", currAttacker.Name, currTarget.Name);
+                AudioManager.Instance.PlaySFX(currTarget.DeathSound); // suara musuh mati
                 totalExpEarned += currTarget.ExpReward; // catat EXP dari musuh yang dikalahkan
+                RollDropsForEnemy(currTarget); // cek item apa saja yang drop dari musuh ini
                 yield return new WaitForSeconds(TURN_DURATION);// wait a few seconds
                 enemyBattlers.Remove(currTarget);
 
@@ -138,7 +152,7 @@ public class BattleSystem : MonoBehaviour
                     bottomText.text = WIN_MESSAGE;
                     yield return new WaitForSeconds(TURN_DURATION);// wait a few seconds
                     yield return StartCoroutine(AwardExpRoutine());
-                    SceneManager.LoadScene(OVERWORLD_SCENE);
+                    ShowBattleResults(); // tampilkan panel Drop + EXP + EXP ke level berikutnya
                 }
             }
             // if no enemies remain
@@ -161,6 +175,7 @@ public class BattleSystem : MonoBehaviour
             {
                 // kill the party member
                 bottomText.text = string.Format("{0} defeated {1}", currAttacker.Name, currTarget.Name);
+                AudioManager.Instance.PlaySFX(currTarget.DeathSound); // suara party member kalah
                 yield return new WaitForSeconds(TURN_DURATION);// wait a few seconds
                 playerBattlers.Remove(currTarget);
 
@@ -241,6 +256,87 @@ public class BattleSystem : MonoBehaviour
         }
     }
 
+    // Menghitung item apa saja yang drop dari 1 musuh yang baru dikalahkan (berdasarkan DropChance masing-masing)
+    private void RollDropsForEnemy(BattleEntities enemy)
+    {
+        if (enemy.PossibleDrops == null) return;
+
+        for (int i = 0; i < enemy.PossibleDrops.Length; i++)
+        {
+            EquipmentDrop drop = enemy.PossibleDrops[i];
+            if (drop.Item == null) continue;
+
+            int roll = Random.Range(1, 101); // 1 - 100
+            if (roll <= drop.DropChance)
+            {
+                battleDrops.Add(drop.Item);
+            }
+        }
+    }
+
+    // Menampilkan panel hasil battle: item yang didapat, total EXP, dan EXP yang masih dibutuhkan tiap member untuk level up
+    private void ShowBattleResults()
+    {
+        bottomTextPopUp.SetActive(false);
+
+        // masukkan semua item yang drop ke inventory party
+        for (int i = 0; i < battleDrops.Count; i++)
+        {
+            partyManager.AddEquipmentToInventory(battleDrops[i]);
+        }
+
+        if (battleResultsPanel == null)
+        {
+            // kalau UI belum di-setup, langsung lanjut ke overworld seperti sebelumnya
+            SceneManager.LoadScene(OVERWORLD_SCENE);
+            return;
+        }
+
+        if (dropsText != null)
+        {
+            if (battleDrops.Count > 0)
+            {
+                string dropsList = "";
+                for (int i = 0; i < battleDrops.Count; i++)
+                {
+                    dropsList += string.Format("- {0} ({1})\n", battleDrops[i].EquipmentName, battleDrops[i].Type);
+                }
+                dropsText.text = dropsList;
+            }
+            else
+            {
+                dropsText.text = NO_DROPS_MESSAGE;
+            }
+        }
+
+        if (expGainedText != null)
+        {
+            expGainedText.text = string.Format(EXP_GAINED_MESSAGE, totalExpEarned);
+        }
+
+        if (expToNextLevelText != null)
+        {
+            List<PartyMember> currentParty = partyManager.GetCurrentParty();
+            string expLines = "";
+            for (int i = 0; i < currentParty.Count; i++)
+            {
+                PartyMember member = currentParty[i];
+                int expNeeded = Mathf.Max(0, member.MaxExp - member.CurrExp);
+                expLines += string.Format("{0} (Lv.{1}): butuh {2} EXP lagi\n", member.MemberName, member.Level, expNeeded);
+            }
+            expToNextLevelText.text = expLines;
+        }
+
+        battleResultsPanel.SetActive(true);
+    }
+
+    // Dipanggil dari tombol "Continue" di battleResultsPanel
+    public void OnContinueFromResults()
+    {
+        if (battleResultsPanel != null) battleResultsPanel.SetActive(false);
+        SceneManager.LoadScene(OVERWORLD_SCENE);
+    }
+
     private void RemoveDeadBattlers()
     {
         for (int i = 0; i < allBattlers.Count; i++)
@@ -261,12 +357,21 @@ public class BattleSystem : MonoBehaviour
         {
             BattleEntities tempEntity = new BattleEntities();
 
-            tempEntity.SetEntityValues(currentParty[i].MemberName, currentParty[i].CurrHealth, currentParty[i].MaxHealth,
-            currentParty[i].Initiative, currentParty[i].Strength, currentParty[i].Level, true);
+            // pakai stat TOTAL (base + bonus equipment) supaya equipment berpengaruh di battle
+            int totalMaxHealth = currentParty[i].GetTotalMaxHealth();
+            int clampedCurrHealth = Mathf.Min(currentParty[i].CurrHealth, totalMaxHealth);
+
+            tempEntity.SetEntityValues(currentParty[i].MemberName, clampedCurrHealth, totalMaxHealth,
+            currentParty[i].GetTotalInitiative(), currentParty[i].GetTotalStrength(), currentParty[i].Level, true);
+
+            // SFX
+            tempEntity.AttackSound = currentParty[i].AttackSound;
+            tempEntity.HitSound = currentParty[i].HitSound;
+            tempEntity.DeathSound = currentParty[i].DeathSound;
 
             BattleVisuals tempBattleVisuals = Instantiate(currentParty[i].MemberBattleVisualPrefab,
             partySpawnPoints[i].position, Quaternion.identity).GetComponent<BattleVisuals>();
-            tempBattleVisuals.SetStartingValues(currentParty[i].CurrHealth, currentParty[i].MaxHealth, currentParty[i].Level);
+            tempBattleVisuals.SetStartingValues(clampedCurrHealth, totalMaxHealth, currentParty[i].Level);
             tempEntity.BattleVisuals = tempBattleVisuals;
 
             allBattlers.Add(tempEntity);
@@ -288,6 +393,12 @@ public class BattleSystem : MonoBehaviour
             tempEntity.SetEntityValues(currentEnemies[i].EnemyName, currentEnemies[i].CurrHealth, currentEnemies[i].MaxHealth,
             currentEnemies[i].Initiative, currentEnemies[i].Strength, currentEnemies[i].Level, false);
             tempEntity.ExpReward = currentEnemies[i].ExpReward;
+            tempEntity.PossibleDrops = currentEnemies[i].PossibleDrops; // bawa data drop untuk dipakai saat musuh ini mati
+
+            // SFX
+            tempEntity.AttackSound = currentEnemies[i].AttackSound;
+            tempEntity.HitSound = currentEnemies[i].HitSound;
+            tempEntity.DeathSound = currentEnemies[i].DeathSound;
 
             BattleVisuals tempBattleVisuals = Instantiate(currentEnemies[i].EnemyVisualPrefab,
             enemySpawnPoints[i].position, Quaternion.identity).GetComponent<BattleVisuals>();
@@ -360,8 +471,10 @@ public class BattleSystem : MonoBehaviour
     private void AttackAction(BattleEntities currAttacker, BattleEntities currTarget)
     {
         int damage = currAttacker.Strength; //get damage (can use an algorithm)
+        AudioManager.Instance.PlaySFX(currAttacker.AttackSound); // suara serang
         currAttacker.BattleVisuals.PlayAttackAnimation(); // play the attack animation
         currTarget.CurrHealth -= damage; // dealing the damage
+        AudioManager.Instance.PlaySFX(currTarget.HitSound); // suara kena hit
         currTarget.BattleVisuals.PlayHitAnimation(); // play their hit anim
         currTarget.UpdateUI(); // update the UI
         bottomText.text = string.Format("{0} attacks {1} for {2} damage", currAttacker.Name, currTarget.Name, damage);
@@ -449,6 +562,12 @@ public class BattleEntities
     public int ExpReward;
     public BattleVisuals BattleVisuals;
     public int Target;
+    public EquipmentDrop[] PossibleDrops; // hanya terisi untuk musuh, dipakai saat musuh ini mati
+
+    // SFX
+    public AudioClip AttackSound;
+    public AudioClip HitSound;
+    public AudioClip DeathSound;
 
     public void SetEntityValues(string name, int currHealth, int maxHealth, int initiative, int strength, int level, bool isPlayer)
     {

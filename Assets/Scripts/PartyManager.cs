@@ -4,10 +4,16 @@ using System.Collections.Generic;
 
 public class PartyManager : MonoBehaviour
 {
+    public const int PARTY_LIMIT = 3; // maksimal character di party aktif (yang ikut battle)
+
     [SerializeField] private PartyMemberInfo[] allMembers;
-    [SerializeField] private List<PartyMember> currentParty;
+    [SerializeField] private List<PartyMember> currentParty;   // party AKTIF, max PARTY_LIMIT
+    [SerializeField] private List<PartyMember> reserveParty;   // character joinable yang belum masuk party aktif
 
     [SerializeField] private PartyMemberInfo defaultPartyMember;
+
+    [Header("Equipment")]
+    [SerializeField] private List<EquipmentInfo> inventory = new List<EquipmentInfo>(); // equipment yang dimiliki tapi belum dipakai
 
     private Vector3 playerPosition;
     private static GameObject instance;
@@ -27,12 +33,16 @@ public class PartyManager : MonoBehaviour
       
     }
 
+    // Menambahkan member baru (misal saat character joinable ditemukan di overworld).
+    // Kalau party aktif masih ada slot kosong (< PARTY_LIMIT), otomatis masuk party aktif.
+    // Kalau sudah penuh, masuk ke reserveParty (bisa ditukar manual lewat menu Manage Party).
     public void AddMemberToPartyByName(string memberName)
     {
         for (int i = 0; i < allMembers.Length; i++)
         {
             if (allMembers[i].MemberName == memberName)
             {
+                Debug.Log("Member ditemukan dan ditambahkan: " + memberName);
                 PartyMember newPartyMember = new PartyMember();
                 newPartyMember.MemberName = allMembers[i].MemberName;
                 newPartyMember.Level = allMembers[i].StartingLevel;
@@ -47,7 +57,19 @@ public class PartyManager : MonoBehaviour
                 newPartyMember.CurrExp = 0;
                 newPartyMember.MaxExp = allMembers[i].BaseExpToLevel;
 
-                currentParty.Add(newPartyMember);
+                // SFX
+                newPartyMember.AttackSound = allMembers[i].AttackSound;
+                newPartyMember.HitSound = allMembers[i].HitSound;
+                newPartyMember.DeathSound = allMembers[i].DeathSound;
+
+                if (currentParty.Count < PARTY_LIMIT)
+                {
+                    currentParty.Add(newPartyMember);
+                }
+                else
+                {
+                    reserveParty.Add(newPartyMember);
+                }
             }
         }
     }
@@ -70,6 +92,13 @@ public class PartyManager : MonoBehaviour
     {
         return currentParty;
     }
+
+    // Semua character joinable yang TIDAK ada di party aktif (menunggu di menu Manage Party)
+    public List<PartyMember> GetReserveParty()
+    {
+        return reserveParty;
+    }
+
     public void SaveHealth(int partyMember, int health)
     {
         currentParty[partyMember].CurrHealth = health;
@@ -153,6 +182,101 @@ public class PartyManager : MonoBehaviour
             currentParty[i].CurrHealth = currentParty[i].MaxHealth;
         }
     }
+
+    // ---------- MANAGE PARTY (SWAP) ----------
+
+    // Menukar posisi 1 member dari party AKTIF dengan 1 member dari reserveParty.
+    // Dipanggil dari PartyMenuController saat player pilih 2 karakter untuk ditukar.
+    public bool SwapPartyMember(PartyMember activeMember, PartyMember reserveMember)
+    {
+        int activeIndex = currentParty.IndexOf(activeMember);
+        int reserveIndex = reserveParty.IndexOf(reserveMember);
+
+        if (activeIndex < 0 || reserveIndex < 0) return false;
+
+        currentParty[activeIndex] = reserveMember;
+        reserveParty[reserveIndex] = activeMember;
+        return true;
+    }
+
+    // ---------- EQUIPMENT ----------
+
+    public List<EquipmentInfo> GetInventory()
+    {
+        return inventory;
+    }
+
+    // Dipanggil saat player dapat/beli equipment baru (misal dari loot atau shop)
+    public void AddEquipmentToInventory(EquipmentInfo item)
+    {
+        if (item != null) inventory.Add(item);
+    }
+
+    // Pasang equipment dari inventory ke member. Kalau slot sudah terisi,
+    // item lama otomatis dikembalikan ke inventory (auto swap).
+    public bool EquipItem(PartyMember member, EquipmentInfo item)
+    {
+        if (member == null || item == null || !inventory.Contains(item)) return false;
+
+        EquipmentInfo previousItem = null;
+
+        switch (item.Type)
+        {
+            case EquipmentType.Weapon:
+                previousItem = member.EquippedWeapon;
+                member.EquippedWeapon = item;
+                break;
+            case EquipmentType.Armor:
+                previousItem = member.EquippedArmor;
+                member.EquippedArmor = item;
+                break;
+            case EquipmentType.Accessory:
+                previousItem = member.EquippedAccessory;
+                member.EquippedAccessory = item;
+                break;
+        }
+
+        inventory.Remove(item);
+        if (previousItem != null)
+        {
+            inventory.Add(previousItem);
+        }
+
+        // Jaga-jaga kalau HealthBonus item baru lebih kecil dari item lama, CurrHealth tidak melebihi MaxHealth total
+        member.CurrHealth = Mathf.Min(member.CurrHealth, member.GetTotalMaxHealth());
+
+        return true;
+    }
+
+    // Lepas equipment dari slot tertentu, kembalikan ke inventory
+    public void UnequipItem(PartyMember member, EquipmentType slot)
+    {
+        if (member == null) return;
+
+        EquipmentInfo removedItem = null;
+
+        switch (slot)
+        {
+            case EquipmentType.Weapon:
+                removedItem = member.EquippedWeapon;
+                member.EquippedWeapon = null;
+                break;
+            case EquipmentType.Armor:
+                removedItem = member.EquippedArmor;
+                member.EquippedArmor = null;
+                break;
+            case EquipmentType.Accessory:
+                removedItem = member.EquippedAccessory;
+                member.EquippedAccessory = null;
+                break;
+        }
+
+        if (removedItem != null)
+        {
+            inventory.Add(removedItem);
+            member.CurrHealth = Mathf.Min(member.CurrHealth, member.GetTotalMaxHealth());
+        }
+    }
 }
 
 [System.Serializable]
@@ -169,6 +293,46 @@ public class PartyMember
     public GameObject MemberBattleVisualPrefab;
     public GameObject MemberOverworldVisualPrefab;
     public PartyMemberInfo MemberInfo;
+
+    // SFX
+    public AudioClip AttackSound;
+    public AudioClip HitSound;
+    public AudioClip DeathSound;
+
+    // Equipment yang sedang dipakai (bisa null kalau slot kosong)
+    public EquipmentInfo EquippedWeapon;
+    public EquipmentInfo EquippedArmor;
+    public EquipmentInfo EquippedAccessory;
+
+    // Stat total = base stat + bonus dari semua equipment yang terpasang.
+    // Pakai method ini di battle/UI, jangan pakai MaxHealth/Strength/Initiative langsung
+    // kalau equipment sudah aktif di game kamu.
+    public int GetTotalMaxHealth()
+    {
+        int bonus = 0;
+        if (EquippedWeapon != null) bonus += EquippedWeapon.HealthBonus;
+        if (EquippedArmor != null) bonus += EquippedArmor.HealthBonus;
+        if (EquippedAccessory != null) bonus += EquippedAccessory.HealthBonus;
+        return MaxHealth + bonus;
+    }
+
+    public int GetTotalStrength()
+    {
+        int bonus = 0;
+        if (EquippedWeapon != null) bonus += EquippedWeapon.StrBonus;
+        if (EquippedArmor != null) bonus += EquippedArmor.StrBonus;
+        if (EquippedAccessory != null) bonus += EquippedAccessory.StrBonus;
+        return Strength + bonus;
+    }
+
+    public int GetTotalInitiative()
+    {
+        int bonus = 0;
+        if (EquippedWeapon != null) bonus += EquippedWeapon.InitiativeBonus;
+        if (EquippedArmor != null) bonus += EquippedArmor.InitiativeBonus;
+        if (EquippedAccessory != null) bonus += EquippedAccessory.InitiativeBonus;
+        return Initiative + bonus;
+    }
 }
 
 [System.Serializable]

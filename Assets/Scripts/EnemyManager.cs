@@ -52,6 +52,14 @@ public class EnemyManager : MonoBehaviour
                 newEnemy.ExpReward = Mathf.RoundToInt(allEnemies[i].ExpReward + (allEnemies[i].ExpReward * levelModifier));
                 newEnemy.EnemyVisualPrefab = allEnemies[i].EnemyVisualPrefab;
 
+                // SFX
+                newEnemy.AttackSound = allEnemies[i].AttackSound;
+                newEnemy.HitSound = allEnemies[i].HitSound;
+                newEnemy.DeathSound = allEnemies[i].DeathSound;
+
+                // Equipment drop
+                newEnemy.PossibleDrops = allEnemies[i].PossibleDrops;
+
                 currentEnemy.Add(newEnemy);
             }
         }
@@ -74,4 +82,12 @@ public class Enemy
     public int Initiative;
     public int ExpReward;
     public GameObject EnemyVisualPrefab;
+
+    // SFX
+    public AudioClip AttackSound;
+    public AudioClip HitSound;
+    public AudioClip DeathSound;
+
+    // Equipment drop
+    public EquipmentDrop[] PossibleDrops;
 }
