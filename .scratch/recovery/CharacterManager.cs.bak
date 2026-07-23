@@ -7,19 +7,14 @@ public class CharacterManager : MonoBehaviour
 {
     [SerializeField] private GameObject joinPopup;
     [SerializeField] private TextMeshProUGUI joinPopupText;
-    [SerializeField] private GameObject pickupPopup;
-    [SerializeField] private TextMeshProUGUI pickupPopupText;
 
     private bool infrontOfPartyMember;
     private GameObject joinableMember;
-    private bool infrontOfCollectibleItem;
-    private GameObject collectibleItem;
     private PlayerControls playerControls;
     private List<GameObject> overworldCharacters = new List<GameObject>();
 
     private const string PARTY_JOINED_MESSAGE = " Joined the party!";
     private const string NPC_JOINABLE_TAG = "NPCJoinable";
-    private const string NPC_ITEM_TAG = "NPCItem";
   
 
     private void Awake()
@@ -54,12 +49,6 @@ public class CharacterManager : MonoBehaviour
            infrontOfPartyMember = false;
            joinableMember = null;
         }
-        else if(infrontOfCollectibleItem == true && collectibleItem != null)
-        {
-            collectibleItem.GetComponent<WorldItemCollectible>().Collect();
-            infrontOfCollectibleItem = false;
-            collectibleItem = null;
-        }
     }
     private void MemberJoined(PartyMemberInfo partyMember)
     {
@@ -80,12 +69,6 @@ public class CharacterManager : MonoBehaviour
             infrontOfPartyMember = true;
             joinableMember = other.gameObject;
             joinableMember.GetComponent<JoinableCharacterScript>().ShowInteractPrompt(true);
-        }
-        else if(other.CompareTag(NPC_ITEM_TAG))
-        {
-            infrontOfCollectibleItem = true;
-            collectibleItem = other.gameObject;
-            collectibleItem.GetComponent<WorldItemCollectible>().ShowInteractPrompt(true);
         }
     }
 
@@ -131,12 +114,6 @@ public class CharacterManager : MonoBehaviour
             infrontOfPartyMember = false;
             joinableMember.GetComponent<JoinableCharacterScript>().ShowInteractPrompt(false);
             joinableMember = null;
-        }
-        else if(other.CompareTag(NPC_ITEM_TAG))
-        {
-            infrontOfCollectibleItem = false;
-            collectibleItem.GetComponent<WorldItemCollectible>().ShowInteractPrompt(false);
-            collectibleItem = null;
         }
     }
 }
