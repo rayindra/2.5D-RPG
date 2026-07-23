@@ -14,11 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyInfo
   EnemyName: Slime
   BaseHealth: 1
-  BaseStr: 1
-  BaseInitiative: 2
+  BaseStr: 2
+  BaseInitiative: 10
   ExpReward: 20
   EnemyVisualPrefab: {fileID: 1957925672177437518, guid: e72e02d908dca334abedc88cd9133239, type: 3}
   AttackSound: {fileID: 8300000, guid: fd25a15f9797641458336cccfb445343, type: 3}
-  HitSound: {fileID: 8300000, guid: 7c47b20bb9874304a809dc5580d403ba, type: 3}
+  HitSound: {fileID: 8300000, guid: 8b23b175a78d6b5458322e3a6c9905d0, type: 3}
   DeathSound: {fileID: 8300000, guid: 566d2ea6240b489479a6e9fd608c2621, type: 3}
   PossibleDrops: []

@@ -128,10 +128,17 @@ public class BattleSystem : MonoBehaviour
         if (allBattlers[i].IsPlayer == true)
         {
             BattleEntities currAttacker = allBattlers[i];
-            if (allBattlers[currAttacker.Target].CurrHealth <= 0)
+            // Guard: Cek target saat ini masih hidup. Kalau sudah mati, retarget random.
+            // Edge case: jika hanya attacker sendiri yang tersisa (karena enemy semua baru saja mati
+            // di turn yang sama), Target CurrHealth <= 0 → GetRandomEnemy() return -1.
+            bool needRetarget = currAttacker.Target < 0 || currAttacker.Target >= allBattlers.Count
+                || allBattlers[currAttacker.Target].CurrHealth <= 0;
+            if (needRetarget)
             {
                 currAttacker.SetTarget(GetRandomEnemy());
             }
+            // Kalau masih -1 (no enemy), skip turn — battle state seharusnya Won.
+            if (currAttacker.Target < 0) yield break;
             BattleEntities currTarget = allBattlers[currAttacker.Target];
             AttackAction(currAttacker, currTarget); // attack selected enemy (attack action)
             yield return new WaitForSeconds(TURN_DURATION);// wait a few seconds
@@ -140,7 +147,8 @@ public class BattleSystem : MonoBehaviour
             if (currTarget.CurrHealth <= 0)
             {
                 bottomText.text = string.Format("{0} defeated {1}", currAttacker.Name, currTarget.Name);
-                AudioManager.Instance.PlaySFX(currTarget.DeathSound); // suara musuh mati
+                if (AudioManager.Instance != null)
+                    AudioManager.Instance.PlaySFX(currTarget.DeathSound); // suara musuh mati
                 totalExpEarned += currTarget.ExpReward; // catat EXP dari musuh yang dikalahkan
                 RollDropsForEnemy(currTarget); // cek item apa saja yang drop dari musuh ini
                 yield return new WaitForSeconds(TURN_DURATION);// wait a few seconds
@@ -162,10 +170,12 @@ public class BattleSystem : MonoBehaviour
 
 
         //enemies turn
-        if (i < allBattlers.Count && allBattlers[i].IsPlayer == false)
+        else if (i < allBattlers.Count && allBattlers[i].IsPlayer == false)
         {
             BattleEntities currAttacker = allBattlers[i];
             currAttacker.SetTarget(GetRandomPartyMember());// get random party member (target)
+            // Guard: kalau tidak ada party member hidup → -1; skip attack.
+            if (currAttacker.Target < 0) yield break;
             BattleEntities currTarget = allBattlers[currAttacker.Target];
 
             AttackAction(currAttacker, currTarget);// attack selected party member (attack action)
@@ -175,7 +185,8 @@ public class BattleSystem : MonoBehaviour
             {
                 // kill the party member
                 bottomText.text = string.Format("{0} defeated {1}", currAttacker.Name, currTarget.Name);
-                AudioManager.Instance.PlaySFX(currTarget.DeathSound); // suara party member kalah
+                if (AudioManager.Instance != null)
+                    AudioManager.Instance.PlaySFX(currTarget.DeathSound); // suara party member kalah
                 yield return new WaitForSeconds(TURN_DURATION);// wait a few seconds
                 playerBattlers.Remove(currTarget);
 
@@ -339,7 +350,8 @@ public class BattleSystem : MonoBehaviour
 
     private void RemoveDeadBattlers()
     {
-        for (int i = 0; i < allBattlers.Count; i++)
+        // Iterate backward so RemoveAt doesn't skip adjacent elements.
+        for (int i = allBattlers.Count - 1; i >= 0; i--)
         {
             if (allBattlers[i].CurrHealth <= 0)
             {
@@ -471,11 +483,15 @@ public class BattleSystem : MonoBehaviour
     private void AttackAction(BattleEntities currAttacker, BattleEntities currTarget)
     {
         int damage = currAttacker.Strength; //get damage (can use an algorithm)
-        AudioManager.Instance.PlaySFX(currAttacker.AttackSound); // suara serang
-        currAttacker.BattleVisuals.PlayAttackAnimation(); // play the attack animation
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(currAttacker.AttackSound); // suara serang
+        if (currAttacker.BattleVisuals != null)
+            currAttacker.BattleVisuals.PlayAttackAnimation(); // play the attack animation
         currTarget.CurrHealth -= damage; // dealing the damage
-        AudioManager.Instance.PlaySFX(currTarget.HitSound); // suara kena hit
-        currTarget.BattleVisuals.PlayHitAnimation(); // play their hit anim
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(currTarget.HitSound); // suara kena hit
+        if (currTarget.BattleVisuals != null)
+            currTarget.BattleVisuals.PlayHitAnimation(); // play their hit anim
         currTarget.UpdateUI(); // update the UI
         bottomText.text = string.Format("{0} attacks {1} for {2} damage", currAttacker.Name, currTarget.Name, damage);
         SaveHealth();
@@ -484,16 +500,17 @@ public class BattleSystem : MonoBehaviour
 
     private int GetRandomPartyMember()
     {
-        List<int> partyMembers = new List<int>(); // create a temporary list of type int (index)
-        // find all the party members -> add them to our list
+        List<int> partyMembers = new List<int>(); // daftar indeks party member yang masih hidup
         for (int i = 0; i < allBattlers.Count; i++)
         {
-            if (allBattlers[i].IsPlayer == true && allBattlers[i].CurrHealth > 0) // we have a party member
+            if (allBattlers[i].IsPlayer == true && allBattlers[i].CurrHealth > 0)
             {
                 partyMembers.Add(i);
             }
         }
-        return partyMembers[Random.Range(0, partyMembers.Count)];// return a random party member
+        // Sentinel: list kosong → -1; caller AttackRoutine harus guard negative.
+        if (partyMembers.Count == 0) return -1;
+        return partyMembers[Random.Range(0, partyMembers.Count)];
     }
 
     private int GetRandomEnemy()
@@ -506,6 +523,8 @@ public class BattleSystem : MonoBehaviour
                 enemies.Add(i);
             }
         }
+        // Sentinel: list kosong → -1; caller AttackRoutine harus guard negative.
+        if (enemies.Count == 0) return -1;
         return enemies[Random.Range(0, enemies.Count)];
     }
 
@@ -587,7 +606,8 @@ public class BattleEntities
 
     public void UpdateUI()
     {
-        BattleVisuals.ChangeHealth(CurrHealth);
+        if (BattleVisuals != null)
+            BattleVisuals.ChangeHealth(CurrHealth);
     }
 
 }

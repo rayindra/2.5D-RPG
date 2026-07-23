@@ -23,23 +23,27 @@ public class PartyManager : MonoBehaviour
         if (instance != null)
         {
             Destroy(this.gameObject);
+            return;
         }
-        else
-        {
-            instance = this.gameObject;
-            AddMemberToPartyByName(defaultPartyMember.MemberName);
-        }
+
+        instance = this.gameObject;
         DontDestroyOnLoad(this.gameObject);
-      
+
+        if (defaultPartyMember != null)
+            AddMemberToPartyByName(defaultPartyMember.MemberName);
     }
 
     // Menambahkan member baru (misal saat character joinable ditemukan di overworld).
     // Kalau party aktif masih ada slot kosong (< PARTY_LIMIT), otomatis masuk party aktif.
     // Kalau sudah penuh, masuk ke reserveParty (bisa ditukar manual lewat menu Manage Party).
-    public void AddMemberToPartyByName(string memberName)
+    // Return true jika berhasil menemukan dan menambahkan member.
+    public bool AddMemberToPartyByName(string memberName)
     {
+        if (string.IsNullOrEmpty(memberName) || allMembers == null) return false;
+
         for (int i = 0; i < allMembers.Length; i++)
         {
+            if (allMembers[i] == null) continue;
             if (allMembers[i].MemberName == memberName)
             {
                 Debug.Log("Member ditemukan dan ditambahkan: " + memberName);
@@ -70,15 +74,22 @@ public class PartyManager : MonoBehaviour
                 {
                     reserveParty.Add(newPartyMember);
                 }
+
+                return true;
             }
         }
+
+        Debug.LogWarning("PartyManager: Member \"" + memberName + "\" tidak ditemukan di allMembers! " +
+            "Pastikan ScriptableObject-nya sudah di-assign di Inspector PartyManager.");
+        return false;
     }
 
     public List<PartyMember> GetAliveParty()
     {
-        List<PartyMember> aliveParty = new List<PartyMember>();
-        aliveParty = currentParty;
-        for (int i = 0; i < aliveParty.Count; i++)
+        // Copy currentParty (don't alias) so removing dead members doesn't mutate the source.
+        // Iterate backward to avoid RemoveAt skip when consecutive dead members exist.
+        List<PartyMember> aliveParty = new List<PartyMember>(currentParty);
+        for (int i = aliveParty.Count - 1; i >= 0; i--)
         {
             if (aliveParty[i].CurrHealth <= 0)
             {

@@ -53,6 +53,7 @@ public class PartyMenuController : MonoBehaviour
     private void Awake()
     {
         partyManager = GameObject.FindFirstObjectByType<PartyManager>();
+        if (partyManager == null) Debug.LogError("PartyMenuController: PartyManager tidak ditemukan di scene!");
 
         if (menuRoot != null) menuRoot.SetActive(false);
 
@@ -98,6 +99,7 @@ public class PartyMenuController : MonoBehaviour
     private List<PartyMember> GetAllJoinedMembers()
     {
         List<PartyMember> all = new List<PartyMember>();
+        if (partyManager == null) return all;
         all.AddRange(partyManager.GetCurrentParty());
         all.AddRange(partyManager.GetReserveParty());
         return all;
@@ -135,6 +137,9 @@ public class PartyMenuController : MonoBehaviour
 
     private void RefreshRoster()
     {
+        if (rosterContainer == null) { Debug.LogError("RefreshRoster: rosterContainer tidak di-assign di Inspector PartyMenuController!"); return; }
+        if (rosterButtonPrefab == null) { Debug.LogError("RefreshRoster: rosterButtonPrefab tidak di-assign di Inspector PartyMenuController!"); return; }
+
         List<PartyMember> allMembers = GetAllJoinedMembers();
 
         while (spawnedRosterButtons.Count < allMembers.Count)

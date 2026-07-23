@@ -52,7 +52,11 @@ public class CharacterManager : MonoBehaviour
     }
     private void MemberJoined(PartyMemberInfo partyMember)
     {
-        GameObject.FindFirstObjectByType<PartyManager>().AddMemberToPartyByName(partyMember.MemberName);
+        bool added = GameObject.FindFirstObjectByType<PartyManager>()
+            .AddMemberToPartyByName(partyMember.MemberName);
+
+        if (!added) return;
+
         joinableMember.GetComponent<JoinableCharacterScript>().CheckIfJoined();
         joinPopup.SetActive(true);
         joinPopupText.text = partyMember.MemberName + PARTY_JOINED_MESSAGE;
